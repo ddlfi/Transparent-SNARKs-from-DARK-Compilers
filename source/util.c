@@ -186,6 +186,10 @@ int make_poly(int d)
 	unsigned char* str;
 
 	fp = fopen("./Txt/poly.txt", "w");
+	if (fp == NULL) {
+    printf("Failed to open file for writing!\n");
+    return 1; // 退出程序或者执行其他错误处理操作
+	}
 
 	for(int i =0; i<d; i++)
 	{

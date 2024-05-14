@@ -156,8 +156,8 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 			flag = 0;
 		}
 
-		BN_mod_exp(z_tmp, pp->g, poly->Fx[0],pp->G, ctx);
-		if(BN_cmp(z_tmp, *C) != 0){
+		BN_mod_mul(z_tmp, pp->g, poly->Fx[0],pp->G, ctx);
+		if(!BN_cmp(z_tmp, *C)){
 			printf("ERROR : g^f != C\n");
 			printf("g^f : %s\n", BN_bn2hex(z_tmp));
 			printf("  C : %s\n", BN_bn2hex(*C));

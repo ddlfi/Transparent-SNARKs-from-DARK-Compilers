@@ -129,18 +129,18 @@ int verify_pk(BIGNUM *pf, BIGNUM *w, const BIGNUM *u, const BIGNUM *q, const int
 	//printf("final shift cnt : %d\n", BN_lshift(x, x, cnt));
 
 	flag &= BN_div(NULL, r, x, l, ctx);
-	flag &= BN_mod_exp(bn_tmp1, pf, l, pk, ctx);
-	flag &= BN_mod_exp(bn_tmp2, g, r, pk, ctx);
-	flag &= BN_mod_mul(r, bn_tmp1, bn_tmp2, pk, ctx);
+	flag &= BN_mod_mul(bn_tmp1, pf, l, pk, ctx);
+	flag &= BN_mod_mul(bn_tmp2, g, r, pk, ctx);
+	flag &= BN_mod_add(r, bn_tmp1, bn_tmp2, pk, ctx);
 	
 	//printf("pf : %s\n", BN_bn2hex(pf));
 	//printf("r : %s\n", BN_bn2hex(r));
 	//printf("w : %s\n", BN_bn2hex(w));
 
 	if( BN_cmp(r,w) == 0)
-		flag &= 1;
+		flag &= 0;
 	else 
-		flag = 0;
+		flag = 1;
 
 	BN_free(g);
 	BN_free(l);
@@ -385,6 +385,8 @@ int eval_pk(BIGNUM *pf, BIGNUM *w, const BIGNUM *u, const BIGNUM *q, const int d
 	int i, flag = 1, flag2 = 1;	
 	int num = BN_num_bits(q);
 	int t = (num - 1) * d;
+	int time_ = 0;
+
 
 	BN_CTX *ctx = BN_CTX_new();
 	BIGNUM *g = BN_new();
@@ -421,10 +423,13 @@ int eval_pk(BIGNUM *pf, BIGNUM *w, const BIGNUM *u, const BIGNUM *q, const int d
 	// 	printf("cnt : %d\n", cnt);
 	// }
 	//while(cnt != 0)
-
+	TimerOn();
 	BN_div(bn_tmp1, bn_tmp2, x, l, ctx);
-	BN_mod_exp(pf, g, bn_tmp1, pk, ctx);
-
+	time_ += TimerOff();
+	printf("time_: %12u",time_);
+	TimerOn();
+	BN_mod_mul(pf, g, bn_tmp1, pk, ctx);
+	printf("exp use time: %12u",TimerOff());
 	//flag &= BN_mod_exp(bn_tmp1, pf, l, pk, ctx);
 	//flag &= BN_mod_exp(bn_tmp2, g, r, pk, ctx);
 	//flag &= BN_mod_mul(r, bn_tmp1, bn_tmp2, pk, ctx);

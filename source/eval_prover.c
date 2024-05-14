@@ -23,9 +23,15 @@ int commit_new(_struct_commit_* cm, const _struct_pp_ pp, const _struct_poly_ po
 
 	for(i = poly.d; i >= 0; i--)
 	{
+		
+		BN_mod_mul( cm->C, cm->C, pp.q, pp.G, ctx);
+		BN_mod_mul( bn_tmp1, pp.g, poly.Fx[i], pp.G, ctx);
+		BN_mod_add( cm->C, cm->C, bn_tmp1, pp.G, ctx);
+		/*
 		BN_mod_exp( cm->C, cm->C, pp.q, pp.G, ctx);
 		BN_mod_exp( bn_tmp1, pp.g, poly.Fx[i], pp.G, ctx);
 		BN_mod_mul( cm->C, cm->C, bn_tmp1, pp.G, ctx);
+		*/
 	}
 
 	//clock_t endTime = clock();
@@ -243,12 +249,18 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 	{
 		printf("d+1 is odd  [d : %d -> d' : %d]\n", poly->d, poly->d + 1);
 		TimerOn();
-
+		//test
+		BN_mod_mul(*C,*C,pp->q,pp->G,ctx);	// C' = C^q
+		BN_mod_add(*y,*y,z,pp->p,ctx);		// y=y*z mod p
+		BN_set_word(y_tmp, poly->d);
+		BN_add(*b, *b, y_tmp);			// b =  bd
+		//test end
+		/*
 		BN_mod_exp(*C,*C,pp->q,pp->G,ctx);	// C' = C^q
 		BN_mod_mul(*y,*y,z,pp->p,ctx);		// y=y*z mod p
 		BN_set_word(y_tmp, poly->d);
 		BN_mul(*b, *b, y_tmp, ctx);			// b =  bd
-		
+		*/
 		poly->d = poly->d + 1;				//d = d + 1		
 		if( poly->Fx[poly->d] == NULL)
 			poly->Fx[poly->d] = BN_new();
@@ -263,12 +275,11 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 	}
 	else
 	{
-		int i;
-		int d_ = ((1+poly->d)/2) - 1; //*d = ((*d+1)>>1)-1;		// P,V compute
+		long long int i;
+		long long int d_ = ((1+poly->d)/2) - 1; //*d = ((*d+1)>>1)-1;		// P,V compute
 		printf("d+1 is even [d : %d -> d' : %d]\n", poly->d, d_);
-		TimerOn();
 
-		//printf("P computes fL\n");
+		printf("P computes fL\n");
 		for(i = 0; i <= d_; i++){	//fL.Fx[i] = poly->Fx[i];
 			if(fL.Fx[i] == NULL){
 				fL.Fx[i] = BN_new();
@@ -277,7 +288,7 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 		}
 		fL.d = d_;
 
-		//printf("P computes fR\n");
+		printf("P computes fR\n");
 		for(i = 0; i <= d_; i++){	//fR.Fx[i] = poly->Fx[d_ + i + 1];
 			if(fR.Fx[i] == NULL){
 				fR.Fx[i] = BN_new();
@@ -290,13 +301,18 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 		BN_set_word(z_tmp, 1);
 		BN_set_word(y_tmp, 0);
 		BN_set_word(yL, 0);
+		TimerOn();
 		i=0;
 		do{
+			
 			BN_mod_mul(y_tmp, fL.Fx[i], z_tmp, pp->p, ctx);
 			BN_mod_add(yL, yL, y_tmp, pp->p, ctx);
 			BN_mod_mul(z_tmp,z_tmp,z, pp->p, ctx);
 			i++;
 		}while(i<= fL.d);
+		RunTime_eval += TimerOff();
+		printf("time1:%12u \n",RunTime_eval);
+		TimerOn();
 		//printf("yL : %s\n", BN_bn2dec(yL));
 
 		//printf("P computes yR\n");	
@@ -321,14 +337,18 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 		//printf("P computes alpha(hash)\n");
 		get_alpha_SHA256(alpha, pp->p, yL, yR, CL.C, CR.C);
 		//BN_set_word(alpha,19);			
-
+		RunTime_eval += TimerOff();
+		printf("time2:%12u \n",RunTime_eval);
+		TimerOn();
 		//POE(CR, C/CL, q^(d'+1)) run	
 		BN_copy(poe_u, CR.C);
 		BN_mod_inverse(poe_w, CL.C, pp->G, ctx);
 		BN_mod_mul(poe_w, poe_w, *C, pp->G, ctx);
 
+
 		//printf("run POE\n");
 		eval_pk(POE_proof, poe_w, poe_u, pp->q, d_+1, pp->G);
+
 
 		//printf("y' <- (a*yL + yR) mod p \n");
 		BN_mod_mul(y_tmp, alpha, yL, pp->p, ctx);
@@ -344,6 +364,9 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 		BN_rshift1(y_tmp,y_tmp);
 		BN_mul(*b,*b,y_tmp,ctx);
 		
+		RunTime_eval += TimerOff();
+		printf("time5:%12u \n",RunTime_eval);
+
 		//printf("f' <- a*fL + fR\n");
 		i=0;
 		do{
@@ -361,7 +384,6 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 			i++;
 		}while(i <= poly->d);
 		poly->d = d_;
-		RunTime_eval += TimerOff();
 		//printf("P run EvalBounded(pp, C', z, y', d', b', f'(X))\n\n");
 
 		TimerOn();
@@ -372,7 +394,7 @@ int EvalBounded(_struct_pp_ *pp, BIGNUM **C, const BIGNUM *z, BIGNUM **y, BIGNUM
 		Write_proof(NULL, CR.C);		
 		Write_proof(NULL, POE_proof);	
 		RunTime_file_IO += TimerOff();
-
+		
 		EvalBounded(pp, C, z, y, b, poly);
 	}
 

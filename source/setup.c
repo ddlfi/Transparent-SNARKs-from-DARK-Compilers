@@ -1,7 +1,7 @@
 #include "../hedder/global_param.h"
 #include "../hedder/util.h"
 //////////////////
-#define D 14
+#define D 12
 int DD;
 
 int KeyGen_RSAsetup( BIGNUM *pk,  BIGNUM *sk, BIGNUM *g, BIGNUM *qq, BIGNUM *pp, const int k)
@@ -45,6 +45,7 @@ int KeyGen_RSAsetup( BIGNUM *pk,  BIGNUM *sk, BIGNUM *g, BIGNUM *qq, BIGNUM *pp,
 
 int main(int argc, char *argv[])
 {
+
 	FILE *fp;
 	int security_level = 512;
 	unsigned int RunTime = 0;
@@ -64,7 +65,6 @@ int main(int argc, char *argv[])
 	KeyGen_RSAsetup(pk, NULL, g, q, p, security_level);
 	RunTime = TimerOff();
 	printf("KeyGen_Time_ %12u [us]\n", RunTime);
-
 	TimerOn();
 	fp = fopen("./Txt/pp.txt","w");
 	fprintf(fp,"%x\n", security_level);
@@ -82,4 +82,22 @@ int main(int argc, char *argv[])
 	BN_free(g);
 	BN_free(q);
 	return 0;
+
+	/*
+	unsigned int RunTime = 0;
+	BN_CTX* ctx = BN_CTX_new();
+	BIGNUM* tmp1 = BN_new();
+	BIGNUM* tmp2 = BN_new();
+	BIGNUM* tmp3 = BN_new();
+	BN_set_word(tmp1,200001223021);
+	BN_set_word(tmp2,300002123001);
+	BN_set_word(tmp3,970003222423);
+	TimerOn();
+	for(int i=0;i<131073;i++){
+		BN_mod_mul( tmp1, tmp1, tmp2, tmp3, ctx);
+
+	}
+	RunTime = TimerOff();
+	printf("100000 times exp %12u [us]\n", RunTime);
+	*/
 }

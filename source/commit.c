@@ -1,5 +1,6 @@
 #include "../hedder/global_param.h"
 #include "../hedder/util.h"
+int cnt=0;
 
 int commit_new(_struct_commit_* cm, const _struct_pp_ pp, const _struct_poly_ poly)
 {
@@ -15,9 +16,15 @@ int commit_new(_struct_commit_* cm, const _struct_pp_ pp, const _struct_poly_ po
 
 	for(i = poly.d; i >= 0; i--)
 	{
+		cnt++;
+		BN_mod_mul( cm->C, cm->C, pp.q, pp.G, ctx);
+		BN_mod_mul( bn_tmp1, pp.g, poly.Fx[i], pp.G, ctx);
+		BN_mod_add( cm->C, cm->C, bn_tmp1, pp.G, ctx);
+		/*
 		BN_mod_exp( cm->C, cm->C, pp.q, pp.G, ctx);
 		BN_mod_exp( bn_tmp1, pp.g, poly.Fx[i], pp.G, ctx);
 		BN_mod_mul( cm->C, cm->C, bn_tmp1, pp.G, ctx);
+		*/
 	}
 
 	BN_CTX_free(ctx);
@@ -77,7 +84,6 @@ int main()
 	Read_pp( &pp );
 	Read_poly(&poly);
 	RunTime_file_IO += TimerOff();
-	
 	TimerOn();
 	commit_new(&cm, pp, poly);
 	//encode(&cm, pp, poly);
@@ -90,12 +96,12 @@ int main()
 
 	printf("Commit_TIME_ %12u [us]\n", RunTime_commit);
 	printf("Commit_I/O__ %12u [us]\n", RunTime_file_IO);
-
+	printf("cnt: %u",cnt);
 	fp = fopen("record/commit.txt", "a+");
 	fprintf(fp, "%d ", RunTime_file_IO);			
 	fprintf(fp, "%d\n", RunTime_commit);
 	fclose(fp);
-
+	printf("here");
 	BN_free(cm.C);
 	BN_free(cm.Fhat);
 	return 0;
